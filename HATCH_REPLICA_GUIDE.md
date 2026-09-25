@@ -1,6 +1,6 @@
 # Rebuilding "LeetCode Second Pass" in Your Own Hatch
 
-This guide lets any Muse user recreate this app 1-to-1 (functionally) as a
+This guide lets any Muse user get this app 1-to-1 (functionally) as a
 **private** artifact inside their own Hatch account. Nothing here shares data
 between accounts — you get your own empty copy and wire up your own LeetCode
 cookie.
@@ -11,10 +11,48 @@ get reminded what to review each day on an FSRS schedule.
 
 ---
 
-## The fast path: paste this into your Muse
+## Path A: clone and adapt (recommended)
 
-Copy everything between the lines and send it as one message to your own
-Muse. It will build the app for you as a private artifact in your Library.
+This repo already contains the complete, working app — no need to rebuild it
+from a description. Another Muse user can turn it into a private Hatch
+artifact with one message:
+
+> Clone https://github.com/SSR-dev-hub/leetcode-second-pass and build it as
+> a private full-stack artifact in my Hatch Library. It's a React + TypeScript
+> server codebase already; adapt the standalone server shims back to the
+> Hatch platform (the seam map is in `server/src/sdk-shim.ts`), keep every
+> feature and behavior, seed no demo data and no pre-made profiles, and hand
+> it over as my own private artifact.
+
+**What their Muse needs to do (the adaptation):** the standalone server
+replaced four Hatch platform primitives, all documented in
+`server/src/sdk-shim.ts` — that file is the porting map, just reverse it:
+
+- `db.ts` (better-sqlite3 + drizzle, migrations `0001`–`0015` run on boot)
+  → the platform database; the `schema.ts` tables carry over as-is.
+- `blobs.ts` (`data/blobs/` filesystem store for note images) → the
+  platform blob store.
+- `ctx.agent.spawnTask` (stubbed to `{ok: false}`) → the real hosted agent
+  task — this restores automatic YouTube channel-catalog fetching natively
+  (see "YouTube video discovery" below).
+- `ctx.invalidateQueries()` (no-op) → the platform query invalidation.
+- Client: `client/src/App.tsx` and `theme.css` carry over unchanged;
+  `client/src/sdk-shim.ts` goes back to the real action client; the client
+  already talks to same-origin `POST /actions`.
+- The personal Notion-import action was deliberately excluded from this
+  repo — nothing to port there.
+
+Everything else — FSRS scheduling, profiles, pages, cookie sync, per-profile
+video channels — works exactly as in the original, because it *is* the
+original code.
+
+---
+
+## Path B: rebuild from the spec
+
+If you'd rather have your Muse build it fresh (e.g. you want to reshape it
+as it goes), paste the message below. Expect a few polish rounds — the
+original was refined over hours of visual feedback.
 
 ---
 
@@ -147,7 +185,9 @@ Muse. It will build the app for you as a private artifact in your Library.
 ## YouTube video discovery — how it works
 
 This is the one subsystem with a real implementation seam, so here is exactly
-how the Hatch version does it and how to make it work outside Hatch.
+how the Hatch version does it and how to make it work outside Hatch. (On
+**Path A** above, the agent-based fetch works natively — nothing manual
+needed.)
 
 ### Behavior contract (both versions)
 
@@ -250,9 +290,9 @@ protected forever.
 
 ## Notes & caveats
 
-- **Expect a few polish rounds.** The original was refined over hours of
-  visual feedback ("move that, shrink this"). The spec above reproduces all
-  behavior; exact spacing/densities may need your eye.
+- **Expect a few polish rounds on Path B.** The from-scratch rebuild was
+  refined over hours of visual feedback ("move that, shrink this"). Path A
+  (clone + adapt) skips this entirely — it's the same code.
 - **LeetCode's APIs are unofficial.** Cookie sync and metadata autofill can
   break if LeetCode changes things — the app degrades to a manual tracker.
 - **Your data is yours alone.** This repo's standalone server has no auth;
