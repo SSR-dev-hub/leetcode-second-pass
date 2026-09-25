@@ -1,0 +1,47 @@
+{
+  "dependencies": {
+    "@tanstack/react-query": "5.100.10",
+    "better-sqlite3": "12.4.1",
+    "drizzle-orm": "0.45.2",
+    "express": "5.1.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "recharts": "2.15.3",
+    "ts-fsrs": "5.4.1",
+    "zod": "4.4.3"
+  },
+  "description": "LeetCode Second Pass \u2014 spaced-repetition study queue with FSRS scheduling, notes, and submission sync. Standalone Node + React + SQLite build.",
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.13",
+    "@types/better-sqlite3": "7.6.13",
+    "@types/express": "5.0.3",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.0.4",
+    "concurrently": "9.2.1",
+    "tailwindcss": "4.1.13",
+    "tailwindcss-safe-area": "1.3.0",
+    "tsx": "4.20.6",
+    "typescript": "5.6.3",
+    "vite": "7.1.9"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "name": "leetcode-second-pass",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:server && npm run build:client",
+    "build:client": "vite build --config client/vite.config.ts",
+    "build:server": "tsc -p server/tsconfig.json",
+    "dev": "concurrently -k -n server,client \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite --config client/vite.config.ts",
+    "dev:server": "tsx watch server/src/index.ts",
+    "start": "node server/dist/index.js",
+    "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit"
+  },
+  "version": "1.0.0",
+  "type": "module"
+}

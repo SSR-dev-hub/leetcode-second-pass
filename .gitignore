@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Runtime data (SQLite database, note images, uploads)
+data/
+
+# Build output
+client/dist/
+server/dist/
+
+# Logs and OS artifacts
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/

@@ -1,0 +1,111 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788047158381,
+      "tag": "0001_initial",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788047158381,
+      "tag": "0002_create_review_app_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788049253668,
+      "tag": "0003_add_grind_169_and_company_tags",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788049890942,
+      "tag": "0004_reconcile_public_list_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788051219110,
+      "tag": "0005_add_neetcode_video",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788051409507,
+      "tag": "0006_add_fsrs_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788052339922,
+      "tag": "0007_add_accepted_submissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788053825510,
+      "tag": "0008_store_profile_leetcode_cookie",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788054918804,
+      "tag": "0009_canonical_submission_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788056608321,
+      "tag": "0010_add_note_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788062920233,
+      "tag": "0011_cache_neetcode_video_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788064380202,
+      "tag": "0012_track_video_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1788064492832,
+      "tag": "0013_remove_known_mismatched_video",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1788136077968,
+      "tag": "0014_allow_imported_submission_without_date",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1790298958875,
+      "tag": "0015_profile_video_channels",
+      "breakpoints": true
+    }
+  ]
+}
