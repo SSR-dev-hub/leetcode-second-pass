@@ -94,6 +94,10 @@ request/response shapes stay in sync at compile time.
   are marked failed instead of hanging, and the UI invites you to paste a
   video URL manually. Channel preference, manual URLs, and per-profile
   channels all work normally. (`server/src/sdk-shim.ts` documents the seam.)
+  **You can restore full auto-discovery** by populating a channel catalog
+  yourself via the `saveNeetcodeVideoCatalog` action (e.g. built from the
+  YouTube Data API v3) — step-by-step instructions are in
+  `HATCH_REPLICA_GUIDE.md` under "YouTube video discovery — how it works".
 - The personal Notion-import action from the original app was removed; it
   was hard-coded to one user's private dataset.
 

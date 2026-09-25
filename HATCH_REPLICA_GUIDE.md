@@ -24,10 +24,12 @@ Muse. It will build the app for you as a private artifact in your Library.
 > profiles (e.g. one per person preparing for interviews).
 >
 > **Scheduling:** Use FSRS-6 server-side with ~90% target retention, no user
-> tuning knobs. Ratings per review: Again, Hard, Good, Easy, Off.
+> tuning knobs. Include a help dialog that briefly explains how FSRS
+> scheduling works. Ratings per review: Again, Hard, Good, Easy, Off.
 > - Problems with no rating yet stay out of the Today queue and Calendar
 >   until first rated.
-> - Rating Off removes the problem from rotation entirely.
+> - Rating Off removes the problem from rotation entirely (status "done").
+> - A per-problem "spaced learning" toggle moves it back into rotation.
 > - Overdue problems stay queued — nothing changes (no rating/history
 >   mutation) until the user actually reviews them.
 > - The `Next review: <date>` display is clickable: it lets the user override
@@ -49,15 +51,17 @@ Muse. It will build the app for you as a private artifact in your Library.
 >   current Library visible ordering.
 > - **Mobile:** hide intuition previews and the Company filter.
 >
-> **Notes/editors:**
+> **Notes/editors:** per-problem fields are Intuition, Learnings, Optimal
+> solution, Brute force solution, edge cases, and time/space complexity.
 > - Rich, indefinitely-expanding editors only for "Notes: Optimal solution"
 >   and "Notes: Brute force solution".
 > - All other multiline fields keep a ~4-line cap with internal scrolling.
+> - Note images can be attached inside the two rich editors.
 > - Auto-save is debounced and flushes on blur/navigation.
 >
 > **Profiles & settings:**
 > - Profile and Settings are merged into one screen: profile switching,
->   appearance, default-profile controls.
+>   appearance (light/dark theme toggle), default-profile controls.
 > - On launch with no profiles, ask the user to name their first profile
 >   (no pre-seeded profiles).
 > - Profile names are editable; deleting a profile deletes all its data after
@@ -72,31 +76,43 @@ Muse. It will build the app for you as a private artifact in your Library.
 > - Progress lists: Blind 75, NeetCode 150, Grind 169.
 > - Company tags are read-only metadata, searchable/filterable in Library.
 >
-> **LeetCode integration (unofficial):**
+> **Problem sources:**
 > - "Add by number" autofills title, difficulty, topics/tags from LeetCode's
 >   public endpoints (no login needed).
 > - Optional per-profile `LEETCODE_SESSION` cookie enables accepted-submission
 >   sync: one-way, merge-only, profile-scoped. Insert-only for new
 >   submissions; never touch the user's notes, ratings, schedules, FSRS
 >   state, review history, preferred submission, or video URLs. Dedupe
->   accepted submissions and display as `#1`, `#2`, etc.
+>   accepted submissions and display as `#1`, `#2`, etc. The cookie is stored
+>   server-side, shown masked, with replace/clear controls.
+> - Notion CSV export import with this field mapping: Intuition→Intuition,
+>   "At Every Step"→Learnings, Solution 1/2→accepted submissions #1/#2,
+>   Video→custom video URL; status "Spaced Learning" maps My Level
+>   Easy/ok→Easy, Medium→Good, Hard→Hard (review dates start at import day +
+>   "Repeat After (Days)", default 10); status "Done"→Off.
 > - In the Add dialog, warn if the session cookie is missing or invalid, so
 >   the user knows the add will come without their submission history.
 > - In Settings, the LeetCode session section explains in plain language
 >   what the session powers (submission sync only) and what works without it
 >   (everything else).
-> - Video links open canonical playable YouTube watch URLs, never `/embed/`.
->   User-entered (custom/manual) video URLs are protected from automatic
->   replacement.
 >
 > **Explainer video discovery:**
 > - Each profile has a "video channel" setting (YouTube channel URL),
 >   defaulting to `https://www.youtube.com/@NeetCode/videos`.
-> - New problems that arrive without a video link are looked up against that
->   profile's channel catalog (fetch and cache each channel's catalog
->   separately).
+> - New problems that arrive without a video link are queued for lookup
+>   against that profile's channel catalog; show the lookup status
+>   (pending/found/failed) and always offer a "paste your own YouTube URL"
+>   fallback. Video links open canonical playable YouTube watch URLs, never
+>   `/embed/`. User-entered (custom/manual) video URLs are protected from
+>   automatic replacement.
 > - Changing the channel preference must NEVER alter existing data — no
 >   re-matching or reconciling of old videos, ever. Forward-only.
+> - Implementation: compile each channel's full uploaded-video catalog once
+>   (channel Videos tab, exhaustively), cache it per (profile, channel), and
+>   match new problems by normalized title plus "LeetCode #N" number hints in
+>   video titles; only fill the video when the problem has none. See the
+>   repo's HATCH_REPLICA_GUIDE.md "YouTube video discovery — how it works"
+>   for the exact state machine.
 >
 > **Data model:** profiles; problems (slug, number, title, difficulty,
 > topics, lists, company tags); per-profile notes (intuition, learnings,
@@ -124,6 +140,113 @@ Muse. It will build the app for you as a private artifact in your Library.
 9. Paste a LeetCode session cookie in Settings → sync pulls accepted
    submissions as `#1`, `#2` without touching your notes.
 10. Remove all profiles → relaunch asks you to name a new profile.
+11. Add a problem without a video → it gets queued, matched from the channel
+    catalog, and shows the video; problems where no match exists show a
+    manual-paste fallback.
+
+## YouTube video discovery — how it works
+
+This is the one subsystem with a real implementation seam, so here is exactly
+how the Hatch version does it and how to make it work outside Hatch.
+
+### Behavior contract (both versions)
+
+- Only problems that arrive **without** a video link enter the lookup queue
+  (`video_lookup_queue`, status `pending`). Problems that already have a
+  video — auto-matched or user-entered — are never touched again.
+- Each profile has its own `video_channel_url` (default
+  `https://www.youtube.com/@NeetCode/videos`). Catalogs are cached per
+  **(profile, channel)** in `profile_video_catalog`, with a state row in
+  `profile_video_catalog_state`: `pending` → `ready` / `failed`.
+- Matching (`matchCatalogVideo`): normalize the problem title; a catalog
+  video matches if its normalized title contains the problem title AND any
+  "leetcode #N" / "lc N" number in the video title equals the problem number
+  (a wrong number vetoes the match). Scoring prefers exact title matches,
+  then title-prefix matches, with a bonus when the number matches.
+- The match only fills `neetCodeVideoUrl` when it is currently NULL —
+  custom/manual URLs are never overwritten. Matched rows set
+  `videoSource = 'catalog'`, `videoLookupStatus = 'found'`.
+- If the catalog fetch can't run, state goes to `failed` (never stuck on
+  `pending`) and the UI shows "Automatic lookup did not finish. You can paste
+  a YouTube URL here."
+- Switching a profile's channel preference never re-matches anything —
+  forward-only by design.
+
+### In Hatch (for the rebuilding assistant)
+
+The catalog fetch and the per-problem fallback search are performed by a
+hosted agent task (`ctx.agent.spawnTask`):
+
+1. `requestVideoResolution` queues the problems, then claims the
+   (profile, channel) state row as `pending` and spawns **one** task with the
+   `catalogFetchMessage`: "Fetch the complete uploaded-video catalog from
+   the exact YouTube channel URL … Use the channel's Videos tab and continue
+   through every page/batch until exhausted … Call `saveNeetcodeVideoCatalog`
+   exactly once with `{profileId, channelUrl, videos: [{title, url}]}`.
+   Preserve each exact title and exact YouTube watch URL; do not construct
+   or guess URLs."
+2. `saveNeetcodeVideoCatalog` validates/normalizes every URL to a canonical
+   `https://www.youtube.com/watch?v=…`, wipes the old catalog for that
+   (profile, channel), inserts the new rows (chunks of 200), marks state
+   `ready`, then immediately runs `applyCatalogMatches` against everything
+   still in the queue.
+3. Anything still unmatched goes to fallback tasks in batches of 25
+   (`fallbackVideoLookupMessage`): an individual search *within that exact
+   channel on YouTube only*, accepting only a real returned URL that clearly
+   matches, else `null`. Results go through `saveNeetcodeVideos`, which again
+   only fills NULL video fields and marks `found`/`not_found`.
+
+### Outside Hatch (this repo's standalone server)
+
+`ctx.agent.spawnTask` has no standalone equivalent — the shim returns
+`{ok: false}`, so the catalog goes to `failed` and matching never runs. To
+restore it, populate the catalog yourself; everything downstream (matching,
+queue draining, UI states) already works unchanged:
+
+**Option A — YouTube Data API v3 (recommended, free quota):**
+
+1. Create an API key at console.cloud.google.com → enable *YouTube Data
+   API v3*.
+2. Resolve the channel handle to its uploads playlist:
+   `GET https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=NeetCode&key=KEY`
+   → `contentDetails.relatedPlaylists.uploads`.
+3. Page through
+   `playlistItems?part=snippet&playlistId=<uploads>&maxResults=50&key=KEY`
+   collecting `snippet.title` and
+   `https://www.youtube.com/watch?v=<snippet.resourceId.videoId>` for each
+   item (up to ~5000 videos; the action accepts max 5000).
+4. Save to `videos.json` as `[{"title": "...", "url": "..."}, …]`, find your
+   profile id (it's `1` on a fresh DB — check the `profiles` table), then:
+
+```bash
+curl -s http://localhost:3000/actions \
+  -H 'Content-Type: application/json' \
+  -d @- <<'EOF' | head -c 300
+{
+  "action": "saveNeetcodeVideoCatalog",
+  "args": {
+    "profileId": 1,
+    "channelUrl": "https://www.youtube.com/@NeetCode/videos",
+    "videos": []
+  }
+}
+EOF
+```
+
+   (Build the real payload with a small script — e.g. python/jq merging
+   `videos.json` into `args.videos`.) The response
+   `{"data": {"cached": N, "matched": M, "fallbackQueued": K}}` confirms it;
+   state flips to `ready` and every queued problem is matched immediately.
+   From then on, new problems without videos are matched automatically by
+   the built-in scorer — no agent needed. Repeat per profile/channel.
+
+**Option B — manual list:** hand-compile `[{title, url}]` for the videos you
+care about and POST the same action. The matcher only needs the videos your
+problems will actually hit.
+
+Unmatched problems in standalone show the manual-paste fallback (the
+per-problem agent search has no equivalent) — paste the URL once and it's
+protected forever.
 
 ## Notes & caveats
 
@@ -134,6 +257,6 @@ Muse. It will build the app for you as a private artifact in your Library.
   break if LeetCode changes things — the app degrades to a manual tracker.
 - **Your data is yours alone.** This repo's standalone server has no auth;
   run it on localhost or behind your own access control.
-- The standalone server build here degrades automatic YouTube catalog
-  fetching (it originally used a hosted AI task); inside Hatch the full
-  behavior works.
+- Automatic YouTube catalog fetching is the one degraded feature in the
+  standalone build — see "YouTube video discovery — how it works" above to
+  restore it.
